@@ -2,118 +2,426 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Test Form</title>
+    <!-- Load Leaflet from CDN -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+          integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+          crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+            integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+            crossorigin=""></script>
+
+    <!-- Load html5-qrcode library -->
+    <script src="https://unpkg.com/html5-qrcode/minified/html5-qrcode.min.js"></script>
+
+    <title>Clock In/Out App</title>
     <style>
+        /* Global Styles */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            font-family: 'Roboto', sans-serif;
+            background-color: #e0e0e0;
+            color: #333;
+            line-height: 1.6;
         }
 
+        /* Container Styles */
         .container {
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
-            width: 300px;
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
         }
 
-        h2 {
+        .header {
             text-align: center;
             margin-bottom: 20px;
+        }
+
+        .header img {
+            max-width: 100px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            color: #007bff;
+        }
+
+        form label {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
             color: #333;
         }
 
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
-            color: #555;
+        .form-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 1rem;
         }
 
-        input[type="text"],
-        input[type="email"],
-        textarea {
+        .form-row > div {
+            flex: 1;
+        }
+
+        form input[type="date"],
+        form input[type="time"],
+        form input[type="text"],
+        form select {
             width: 100%;
-            padding: 10px;
-            margin-bottom: 15px;
+            padding: 12px;
             border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 16px;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+            transition: border-color 0.3s ease;
         }
 
-        button[type="submit"] {
+        form input[type="date"]:focus,
+        form input[type="time"]:focus,
+        form input[type="text"]:focus,
+        form select:focus {
+            border-color: #007bff;
+            outline: none;
+        }
+
+        form button[type="submit"] {
+            display: block;
             width: 100%;
-            padding: 10px;
-            background-color: #28a745;
-            color: white;
+            padding: 12px;
+            background-color: #007bff;
+            color: #fff;
             border: none;
-            border-radius: 4px;
-            font-size: 16px;
+            border-radius: 8px;
             cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+            margin-top: 20px;
         }
 
-        button[type="submit"]:hover {
+        form button[type="submit"]:hover {
+            background-color: #0056b3;
+        }
+
+        form button[type="button"] {
+            padding: 12px;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+            font-weight: bold;
+            width: 100%;
+        }
+
+        form button[type="button"].clock-in {
+            background-color: #28a745;
+        }
+
+        form button[type="button"].clock-in:hover {
             background-color: #218838;
         }
 
-        .message {
-            margin-top: 20px;
-            text-align: center;
-            color: #28a745;
+        form button[type="button"].clock-out {
+            background-color: #dc3545;
+        }
+
+        form button[type="button"].clock-out:hover {
+            background-color: #c82333;
+        }
+
+        /* Disabled state for buttons */
+        form button[type="button"].disabled {
+            background-color: #dcdcdc;
+            color: #999;
+            cursor: not-allowed;
+        }
+
+        #map {
+            height: 300px;
+            width: 100%;
+            margin-bottom: 20px;
+            display: none; /* Hide the map element by default */
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Style the accuracy control */
+        .accuracy-control {
+            background-color: rgba(255, 255, 255, 0.9);
+            padding: 8px;
+            border-radius: 6px;
+            font-weight: bold;
+        }
+
+        /* QR Scanner Styles */
+        #qr-reader {
+            width: 100%;
+            height: 300px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            background-color: #ffffff;
         }
     </style>
 </head>
 <body>
 <div class="container">
-    <h2>Test Form</h2>
-    <form id="testForm">
-        <label for="name">Name:</label>
-        <input type="text" id="name" name="name" required>
+    <div class="header">
+        <img src="your-logo.png" alt="Company Logo">
+        <h1>Record Your Shift</h1>
+    </div>
 
-        <label for="email">Email:</label>
-        <input type="email" id="email" name="email" required>
+    <form>
+        <div class="form-row">
+            <div>
+                <label for="latitude">Latitude:</label>
+                <input type="text" id="Latitude" name="latitude" placeholder="Latitude" readonly>
+            </div>
+            <div>
+                <label for="longitude">Longitude:</label>
+                <input type="text" id="Longitude" name="longitude" placeholder="Longitude" readonly>
+            </div>
+        </div>
 
-        <label for="message">Message:</label>
-        <textarea id="message" name="message" rows="4" required></textarea>
+        <div class="form-row">
+            <div>
+                <button type="button" class="clock-in" onclick="getLocation(); setClockIn();" id="clockInBtn">Clock In</button>
+            </div>
+            <div>
+                <button type="button" class="clock-out disabled" onclick="getLocation(); setClockOut();" id="clockOutBtn" disabled>Clock Out</button>
+            </div>
+        </div>
+
+        <div id="map"></div>
+
+        <div class="form-row">
+            <div>
+                <label for="date">Date:</label>
+                <input type="date" id="currentDate" name="date" readonly>
+            </div>
+            <div>
+                <label for="time">Time:</label>
+                <input type="time" id="currentTime" name="time" readonly>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div>
+                <label for="identity">Name:</label>
+                <input type="text" name="identity" placeholder="Enter your name">
+            </div>
+            <div>
+                <label for="site">Site:</label>
+                <select name="site">
+                    <option value="site1">Site 1</option>
+                    <option value="site2">Site 2</option>
+                    <option value="site3">Site 3</option>
+                    <option value="site4">Site 4</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row" id="conditionalFields" style="display: none;">
+            <div>
+                <label for="role">Role:</label>
+                <select name="role">
+                    <option value="role1">Role 1</option>
+                    <option value="role2">Role 2</option>
+                    <option value="role3">Role 3</option>
+                </select>
+            </div>
+            <div>
+                <label for="break">Break:</label>
+                <select name="break">
+                    <option value="none">No Break</option>
+                    <option value="15min">15 Minutes</option>
+                    <option value="30min">30 Minutes</option>
+                    <option value="1hour">1 Hour</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row" id="earlyFinishRow" style="display: none;">
+            <div>
+                <label for="earlyFinish">Early Finish?</label>
+                <select name="earlyFinish">
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                </select>
+            </div>
+        </div>
 
         <button type="submit">Submit</button>
     </form>
-
-    <div class="message" id="responseMessage"></div>
 </div>
-
 <script>
-    document.getElementById('testForm').addEventListener('submit', function(event) {
+    var map;
+    var marker;
+    var circle;
+    var accuracyControl;
+
+    function getLocation() {
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(showPosition);
+        } else {
+            alert("Geolocation is not supported by this browser.");
+        }
+    }
+
+    function showPosition(position) {
+        document.getElementById("Latitude").value = position.coords.latitude;
+        document.getElementById("Longitude").value = position.coords.longitude;
+
+        document.getElementById("map").style.display = "block";
+
+        if (!map) {
+            map = L.map('map').setView([position.coords.latitude, position.coords.longitude], 18);
+
+            L.tileLayer('http://{s}.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                maxZoom: 22,
+                subdomains: ['mt0', 'mt1', 'mt2', 'mt3']
+            }).addTo(map);
+
+            accuracyControl = L.control({position: 'topright'});
+            accuracyControl.onAdd = function (map) {
+                this._div = L.DomUtil.create('div', 'accuracy-control');
+                this.update();
+                return this._div;
+            };
+            accuracyControl.update = function (accuracy) {
+                this._div.innerHTML = accuracy ? "Accuracy: " + accuracy + " meters" : "";
+            };
+            accuracyControl.addTo(map);
+        } else {
+            map.setView([position.coords.latitude, position.coords.longitude], 18);
+        }
+        accuracyControl.update(position.coords.accuracy);
+
+        if (!marker) {
+            marker = L.marker([position.coords.latitude, position.coords.longitude]).addTo(map);
+        } else {
+            marker.setLatLng([position.coords.latitude, position.coords.longitude]);
+        }
+
+        if (!circle) {
+            circle = L.circle([position.coords.latitude, position.coords.longitude], {
+                color: '#3798f0',
+                fillColor: '#85bef2',
+                fillOpacity: 0.5,
+                radius: position.coords.accuracy
+            }).addTo(map);
+        } else {
+            circle.setLatLng([position.coords.latitude, position.coords.longitude]);
+            circle.setRadius(position.coords.accuracy);
+        }
+    }
+
+    // Set current date and time
+    function setCurrentDateTime() {
+        const now = new Date();
+        const date = now.toISOString().slice(0, 10);
+        const time = now.toTimeString().split(' ')[0];
+
+        document.getElementById('currentDate').value = date;
+        document.getElementById('currentTime').value = time;
+    }
+
+    setCurrentDateTime();  // Initialize with current date and time
+
+    // Clock In functionality
+    function setClockIn() {
+        setCurrentDateTime();
+        document.getElementById('conditionalFields').style.display = 'none';
+        document.getElementById('earlyFinishRow').style.display = 'none';
+
+        document.getElementById('clockInBtn').classList.remove('disabled');
+        document.getElementById('clockInBtn').disabled = false;
+
+        document.getElementById('clockOutBtn').classList.add('disabled');
+        document.getElementById('clockOutBtn').disabled = true;
+    }
+
+    // Clock Out functionality
+    function setClockOut() {
+        setCurrentDateTime();
+        document.getElementById('conditionalFields').style.display = 'flex';
+        document.getElementById('earlyFinishRow').style.display = 'block';
+
+        document.getElementById('clockOutBtn').classList.remove('disabled');
+        document.getElementById('clockOutBtn').disabled = false;
+
+        document.getElementById('clockInBtn').classList.add('disabled');
+        document.getElementById('clockInBtn').disabled = true;
+    }
+
+    let form = document.querySelector("form");
+    form.addEventListener("submit", (event) => {
         event.preventDefault();
 
+        // Show the progress bar
+        let progressBar = document.querySelector('.progress-bar');
+        progressBar.style.display = 'block';
+
+        // Collect form data
         let formData = {
-            name: document.getElementById('name').value,
-            email: document.getElementById('email').value,
-            message: document.getElementById('message').value
+            date: form.elements.date.value,
+            time: form.elements.time.value,
+            name: form.elements.identity.value,
+            site: form.elements.site.value,
+            latitude: form.elements.latitude.value,
+            longitude: form.elements.longitude.value,
         };
 
-        fetch("https://script.google.com/a/macros/staff-hire.co.uk/s/AKfycbytcZVLmHJ6AmDShlpULe14hS24mBsne5rFDDpjpaFjdYmClK6T9d_xnp_0BDPnjVyF/exec", {
+        // Include conditional fields if Clock Out was selected
+        if (document.getElementById('conditionalFields').style.display === 'flex') {
+            formData.role = form.elements.role.value;
+            formData.break = form.elements.break.value;
+            formData.earlyFinish = form.elements.earlyFinish.value;
+        }
+
+        fetch("https://script.google.com/macros/s/####/exec", { // Your Google App Script WebApp URL
             method: "POST",
-            body: JSON.stringify(formData),
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            body: JSON.stringify(formData)
         })
-        .then(response => response.text())
-        .then(data => {
-            document.getElementById('responseMessage').textContent = 'Form submitted successfully!';
-            document.getElementById('testForm').reset();
-        })
-        .catch(error => {
-            document.getElementById('responseMessage').textContent = 'Error submitting form. Please try again.';
-            console.error('Error:', error);
-        });
+            .then(r => r.text())
+            .then(data => {
+                console.log(data);
+
+                // Hide the progress bar
+                progressBar.style.display = 'none';
+
+                // Show the complete message
+                let completeMessage = document.querySelector('.complete-message');
+                completeMessage.style.display = 'block';
+
+                // Clear the form after a delay
+                setTimeout(() => {
+                    completeMessage.style.display = 'none';
+                    form.reset();
+                    document.getElementById("map").style.display = 'none';
+                    setCurrentDateTime();  // Reset to current date and time
+                    document.getElementById('conditionalFields').style.display = 'none';
+                    document.getElementById('earlyFinishRow').style.display = 'none';
+
+                    // Reset buttons
+                    document.getElementById('clockInBtn').classList.remove('disabled');
+                    document.getElementById('clockInBtn').disabled = false;
+                    document.getElementById('clockOutBtn').classList.add('disabled');
+                    document.getElementById('clockOutBtn').disabled = true;
+                }, 3000);
+            });
     });
+
+    // Update the time every second
+    setInterval(setCurrentDateTime, 1000);
 </script>
 </body>
 </html>
