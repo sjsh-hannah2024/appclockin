@@ -137,13 +137,6 @@
             background-color: #c82333;
         }
 
-        /* Disabled state for buttons */
-        form button[type="button"].disabled {
-            background-color: #dcdcdc;
-            color: #999;
-            cursor: not-allowed;
-        }
-
         #map {
             height: 300px;
             width: 100%;
@@ -175,8 +168,8 @@
 <body>
 <div class="container">
     <div class="header">
-        <img src="your-logo.png" alt="Company Logo">
-        <h1>Record Your Shift</h1>
+        <img src="https://manatal-backend-public-assets.s3.amazonaws.com/media/career_portal_logo_direct_upload/21d072f7-03d0-457a-b476-ae173142ef14_SJSH%20Logo%20trans%20png.png" alt="Company Logo">
+        <h1>Record A Shift</h1>
     </div>
 
     <form>
@@ -193,10 +186,10 @@
 
         <div class="form-row">
             <div>
-                <button type="button" class="clock-in" onclick="getLocation(); setClockIn();" id="clockInBtn">Clock In</button>
+                <button type="button" class="clock-in" onclick="getLocation(); setClockIn();">Clock In</button>
             </div>
             <div>
-                <button type="button" class="clock-out disabled" onclick="getLocation(); setClockOut();" id="clockOutBtn" disabled>Clock Out</button>
+                <button type="button" class="clock-out" onclick="getLocation(); setClockOut();">Clock Out</button>
             </div>
         </div>
 
@@ -341,12 +334,6 @@
         setCurrentDateTime();
         document.getElementById('conditionalFields').style.display = 'none';
         document.getElementById('earlyFinishRow').style.display = 'none';
-
-        document.getElementById('clockInBtn').classList.remove('disabled');
-        document.getElementById('clockInBtn').disabled = false;
-
-        document.getElementById('clockOutBtn').classList.add('disabled');
-        document.getElementById('clockOutBtn').disabled = true;
     }
 
     // Clock Out functionality
@@ -354,12 +341,6 @@
         setCurrentDateTime();
         document.getElementById('conditionalFields').style.display = 'flex';
         document.getElementById('earlyFinishRow').style.display = 'block';
-
-        document.getElementById('clockOutBtn').classList.remove('disabled');
-        document.getElementById('clockOutBtn').disabled = false;
-
-        document.getElementById('clockInBtn').classList.add('disabled');
-        document.getElementById('clockInBtn').disabled = true;
     }
 
     let form = document.querySelector("form");
@@ -410,12 +391,6 @@
                     setCurrentDateTime();  // Reset to current date and time
                     document.getElementById('conditionalFields').style.display = 'none';
                     document.getElementById('earlyFinishRow').style.display = 'none';
-
-                    // Reset buttons
-                    document.getElementById('clockInBtn').classList.remove('disabled');
-                    document.getElementById('clockInBtn').disabled = false;
-                    document.getElementById('clockOutBtn').classList.add('disabled');
-                    document.getElementById('clockOutBtn').disabled = true;
                 }, 3000);
             });
     });
