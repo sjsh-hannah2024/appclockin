@@ -172,7 +172,7 @@
         <h1>Record A Shift</h1>
     </div>
 
-    <form>
+    <form id="clockForm">
         <div class="form-row">
             <div>
                 <label for="latitude">Latitude:</label>
@@ -213,32 +213,18 @@
             </div>
             <div>
                 <label for="site">Site:</label>
-                <select name="site">
-                    <option value="site1">Site 1</option>
-                    <option value="site2">Site 2</option>
-                    <option value="site3">Site 3</option>
-                    <option value="site4">Site 4</option>
-                </select>
+                <select name="site" id="site"></select>
             </div>
         </div>
 
         <div class="form-row" id="conditionalFields" style="display: none;">
             <div>
                 <label for="role">Role:</label>
-                <select name="role">
-                    <option value="role1">Role 1</option>
-                    <option value="role2">Role 2</option>
-                    <option value="role3">Role 3</option>
-                </select>
+                <select name="role" id="role"></select>
             </div>
             <div>
                 <label for="break">Break:</label>
-                <select name="break">
-                    <option value="none">No Break</option>
-                    <option value="15min">15 Minutes</option>
-                    <option value="30min">30 Minutes</option>
-                    <option value="1hour">1 Hour</option>
-                </select>
+                <select name="break" id="break"></select>
             </div>
         </div>
 
@@ -260,6 +246,15 @@
     var marker;
     var circle;
     var accuracyControl;
+    let action = "Clock In"; // Default action
+
+    document.querySelector('.clock-in').addEventListener('click', () => {
+        action = "Clock In";
+    });
+
+    document.querySelector('.clock-out').addEventListener('click', () => {
+        action = "Clock Out";
+    });
 
     function getLocation() {
         if (navigator.geolocation) {
@@ -343,57 +338,67 @@
         document.getElementById('earlyFinishRow').style.display = 'block';
     }
 
-    let form = document.querySelector("form");
-    form.addEventListener("submit", (event) => {
+    document.getElementById("clockForm").addEventListener("submit", (event) => {
         event.preventDefault();
-
-        // Show the progress bar
-        let progressBar = document.querySelector('.progress-bar');
-        progressBar.style.display = 'block';
 
         // Collect form data
         let formData = {
-            date: form.elements.date.value,
-            time: form.elements.time.value,
-            name: form.elements.identity.value,
-            site: form.elements.site.value,
-            latitude: form.elements.latitude.value,
-            longitude: form.elements.longitude.value,
+            name: event.target.elements.identity.value,
+            site: event.target.elements.site.value,
+            time: event.target.elements.time.value,
+            action: action, // Use dynamic action
+            date: event.target.elements.date.value,
+            break: event.target.elements.break ? event.target.elements.break.value : '',
+            manual: false, // Add your logic if this is dynamic
+            enteredBy: "YourUserName", // Capture dynamically if needed
+            role: event.target.elements.role ? event.target.elements.role.value : '',
+            notes: "", // Add your logic if notes are needed
+            manualBreak: false, // Add your logic if this is dynamic
+            earlyFinish: event.target.elements.earlyFinish ? event.target.elements.earlyFinish.value : '',
+            userIp: "123.456.789.000", // Capture dynamically if needed
+            latLong: `${event.target.elements.latitude.value},${event.target.elements.longitude.value}`
         };
 
-        // Include conditional fields if Clock Out was selected
-        if (document.getElementById('conditionalFields').style.display === 'flex') {
-            formData.role = form.elements.role.value;
-            formData.break = form.elements.break.value;
-            formData.earlyFinish = form.elements.earlyFinish.value;
-        }
-
-        fetch("https://script.google.com/macros/s/####/exec", { // Your Google App Script WebApp URL
+        fetch("https://script.google.com/a/macros/staff-hire.co.uk/s/AKfycbytcZVLmHJ6AmDShlpULe14hS24mBsne5rFDDpjpaFjdYmClK6T9d_xnp_0BDPnjVyF/exec", {
             method: "POST",
-            body: JSON.stringify(formData)
+            body: JSON.stringify(formData),
+            headers: {
+                'Content-Type': 'application/json'
+            }
         })
-            .then(r => r.text())
-            .then(data => {
-                console.log(data);
-
-                // Hide the progress bar
-                progressBar.style.display = 'none';
-
-                // Show the complete message
-                let completeMessage = document.querySelector('.complete-message');
-                completeMessage.style.display = 'block';
-
-                // Clear the form after a delay
-                setTimeout(() => {
-                    completeMessage.style.display = 'none';
-                    form.reset();
-                    document.getElementById("map").style.display = 'none';
-                    setCurrentDateTime();  // Reset to current date and time
-                    document.getElementById('conditionalFields').style.display = 'none';
-                    document.getElementById('earlyFinishRow').style.display = 'none';
-                }, 3000);
-            });
+        .then(response => response.text())
+        .then(data => {
+            console.log('Success:', data);
+            alert('Form submitted successfully!');
+            event.target.reset();
+            document.getElementById("map").style.display = 'none';
+            setCurrentDateTime();  // Reset to current date and time
+            document.getElementById('conditionalFields').style.display = 'none';
+            document.getElementById('earlyFinishRow').style.display = 'none';
+        })
+        .catch(error => console.error('Error submitting form:', error));
     });
+
+    // Fetch and populate dropdowns from Google Sheets
+    fetch('https://script.google.com/a/macros/staff-hire.co.uk/s/AKfycbytcZVLmHJ6AmDShlpULe14hS24mBsne5rFDDpjpaFjdYmClK6T9d_xnp_0BDPnjVyF/exec')
+        .then(response => response.json())
+        .then(data => {
+            populateDropdown('site', data.sites);
+            populateDropdown('role', data.roles.map(role => ({ label: role, value: role })));
+            populateDropdown('break', data.breaks);
+        })
+        .catch(error => console.error('Error fetching data:', error));
+
+    function populateDropdown(elementId, options) {
+        const dropdown = document.getElementById(elementId);
+        dropdown.innerHTML = '';
+        options.forEach(option => {
+            const optElement = document.createElement('option');
+            optElement.value = option.value || option;
+            optElement.textContent = option.label || option;
+            dropdown.appendChild(optElement);
+        });
+    }
 
     // Update the time every second
     setInterval(setCurrentDateTime, 1000);
